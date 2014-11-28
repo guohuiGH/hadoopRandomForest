@@ -1,0 +1,323 @@
+#include<iostream>
+#include<vector>
+#include<fstream>
+#include<assert.h>
+
+using namespace std;
+const int userNum = 24984;
+
+const int goodNum = 102;
+vector<double>userData1[24984];
+vector<double>userData2[102];
+vector<double>tempData[102];
+
+vector<double>xx[102];
+vector<double>tempXX[102];
+
+vector<double>tempTheta[userNum];
+vector<double>theta[24984];
+
+vector<double>aver;
+vector<double>aver2;
+vector<int>countPredict;
+double idData[1810454];
+const int feature = 200;
+const int times = 200;
+double atha = 0.005;
+double lamda = 0.999;
+const double ini = 110;
+const double ini2 = 20;
+
+double random(int scale)
+{
+	return ((double(rand()) / RAND_MAX) * scale - (scale-1)/2)/10;
+}
+
+void getData()
+{
+	fstream filein;
+	filein.open("train.txt",ios::in);
+	int a, b,c;
+	double d;
+	
+	for (int i = 0; i < 24984; i++)
+	{
+		for (int j = 0; j < 102; j++)
+		{
+			userData1[i].push_back(20.0);
+			userData2[j].push_back(ini);
+			tempData[j].push_back(0);
+		}
+	}
+	int last = 1;
+	for (int i = 0; i < 1448364;i++) 
+	{
+		
+		filein >> a >> b >> c >> d;
+		idData[a] = d;
+		userData1[b][c] = d;
+		userData2[c][b] = d;
+	}
+	filein.close();
+}
+
+void writeData()
+{
+	fstream fileout,filein;
+	filein.open("test.txt",ios::in);
+	fileout.open("result.csv",ios::out);
+	for (int i = 0; i < 362091; i++)
+	{
+		int a, b,c;
+		double result = 0.;
+		filein >> a >> b >> c;
+		fileout << a << ",";
+		
+		if (idData[a] != NULL)
+		{
+			fileout << idData[a];
+		}
+		else
+		{
+		
+			for (int j = 0; j < feature; j++)
+			{
+				result += theta[b][j] * xx[c][j];
+			}
+			if (fabs(result + aver[c]) < 10)
+			{
+				fileout << (result + aver[c]);
+			}
+			else
+			{
+				fileout << aver2[b];
+			}
+		}
+		fileout << endl;
+	}
+	filein.close();
+	fileout.close();
+
+}
+
+void prevDo() {
+	
+	for (int i = 0; i < 102; i++)
+	{
+		for (int j = 0; j < feature; j++)
+		{
+			xx[i].push_back(random(3));
+			tempXX[i].push_back(0.);
+		}
+	}
+	for (int i = 0; i < 24984; i++)
+	{
+		for (int j = 0; j < feature; j++)
+		{
+			theta[i].push_back(random(3));
+			tempTheta[i].push_back(0.);
+		}
+	}
+	aver.push_back(0);
+	aver.push_back(0);
+
+
+	for (int i = 2; i < 102; i++)
+	{
+		double total = 0.;
+		int count = 0;
+		for (int j = 0; j < userData2[i].size(); j++)
+		{
+			if (userData2[i][j] < ini2)
+			{
+				total += userData2[i][j];
+				count++;
+			}
+
+		}
+		double av = total/count;
+		aver.push_back(av);
+		countPredict.push_back(count);
+		for (int j = 0; j < userData2[i].size(); j++)
+		{
+			if (userData2[i][j] < ini2)
+				userData2[i][j] -= av;
+		}
+	}
+	
+	aver2.push_back(0);
+	for (int i = 1; i < 29484; i++)
+	{
+		double total = 0;
+		double count = 0;
+		for (int j = 0; j < userData1[i].size(); j++)
+		{
+			if (userData1[i][j] < ini2)
+			{
+				total += userData1[i][j];
+				count++;
+			}
+		}
+		double av = total/count;
+		aver2.push_back(av);
+	
+	}
+	
+}
+int a = 1;
+
+int index(int i)
+{
+	a++;
+	if (a >= userNum)
+	{
+		a = 1;
+	}
+	
+	while (true)
+	{
+		
+		if (userData2[i][a] < ini2)
+		{
+			return a;
+		}
+		a++;
+		if (a == userNum)
+		{
+			a = 1;
+		}
+		
+	}
+	
+}
+
+int a2 = 2;
+int index2(int i)
+{
+	a2++;
+	if (a2 >= goodNum)
+	{
+		a2 = 2;
+	}
+	while (true)
+	{
+		
+		if (userData2[a2][i] < ini2)
+		{
+			
+			return a2;
+		}
+		a2++;
+		if (a2 == goodNum)
+		{
+			a2 = 2;
+		}
+	}
+	
+}
+
+void doiteration()
+{
+
+	for (int i = 0; i < times; i++)
+	{
+		atha *= 0.99;
+		for (int j = 1; j < userNum; j++)
+		{
+			
+			int ind = index2(j);
+			
+			double value = 0;
+			for (int k = 0; k < feature; k++)
+			{
+				value += theta[j][k]*xx[ind][k]; 
+			}
+			for (int k = 0; k < feature; k++)
+			{
+				tempTheta[j][k] = lamda*theta[j][k] - atha*(value-userData2[ind][j])*xx[ind][k];
+			}
+		}
+		for (int z = 0; z < 10; z++)
+		{
+			for (int j = 2; j < goodNum; j++)
+		{
+			
+			int ind = index(j);
+			
+			
+			double value = 0;
+			for (int k = 0; k < feature; k++)
+			{
+				value += theta[ind][k]*xx[j][k];
+			}
+			for (int k = 0; k < feature; k++)
+			{
+				
+
+				tempXX[j][k] = lamda*xx[j][k] - atha * (value-userData2[j][ind])*theta[ind][k];	
+			}
+		}
+		}
+		
+
+		
+
+		for (int j = 2; j < goodNum; j++)
+		{
+			for (int k = 0; k < feature; k++)
+			{
+				xx[j][k] = tempXX[j][k];
+			}
+		}
+
+		for (int j = 1; j < userNum; j++)
+		{
+			for (int k = 0; k < feature; k++)
+			{
+				theta[j][k] = tempTheta[j][k];
+			}
+		}
+	
+		printf("i: %d\n",i);
+		if (!(i%10))
+		{
+
+		
+		double tt = 0;
+		double ff = 0;
+		int count = 0;
+
+		for (int j = 2; j < goodNum; j++)
+		{
+			for (int t = 1; t < userNum; t++)
+			{
+				
+				if (userData2[j][t] < ini2)
+				{
+					double temp = 0;
+					for (int k = 0; k < feature; k++)
+					{
+						temp += theta[t][k]*xx[j][k];						
+					}
+					temp -= userData2[j][t];
+					tt += temp*temp;
+					count++;
+				}
+			}
+		}
+		ff = sqrt(tt / count);
+		printf("%lf\n",ff);
+		}
+
+	}
+}
+
+int main()
+{
+	getData();
+	prevDo();
+	doiteration();
+	
+	writeData();
+	return 0;
+}
