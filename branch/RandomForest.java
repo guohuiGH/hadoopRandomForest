@@ -35,6 +35,7 @@ public class RandomForest {
 	private void trainRgbToGray(int k) {
 		for (int i = 0; i < FEATURE; i++) {
 			trainSet[k][i] = (r[i]*19595 + g[i]*38469 + b[i]*7472) >> 16;
+			
 		}
 		
 	}
